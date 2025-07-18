@@ -6,7 +6,6 @@ import 'package:sajdah/screens/dashboard/dashboard.dart';
 import 'providers/salah_provider.dart';
 
 import 'services/notification_service.dart';
-import 'services/prayer_time_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

@@ -1,11 +1,14 @@
-
 import 'package:adhan_dart/adhan_dart.dart';
 import 'package:geolocator/geolocator.dart';
 import '../models/prayer_time.dart';
 
 class PrayerTimeService {
   static const List<String> prayerNames = [
-    'Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'
+    'Fajr',
+    'Dhuhr',
+    'Asr',
+    'Maghrib',
+    'Isha',
   ];
 
   Future<Position> getCurrentLocation() async {
@@ -32,11 +35,13 @@ class PrayerTimeService {
   Future<List<PrayerTime>> getTodaysPrayerTimes() async {
     try {
       Position position = await getCurrentLocation();
-      
+
       final coordinates = Coordinates(position.latitude, position.longitude);
       final calculationParameters = CalculationParameters(
-        method: CalculationMethod.MuslimWorldLeague,
-        madhab: Madhab.Shafi, fajrAngle: null, ishaAngle: null,
+        method: CalculationMethod.muslimWorldLeague(),
+        madhab: Madhab.shafi,
+        fajrAngle: 18.0,
+        ishaAngle: 17.0,
       );
 
       final prayerTimes = PrayerTimes(
@@ -46,11 +51,11 @@ class PrayerTimeService {
       );
 
       return [
-        PrayerTime(name: 'Fajr', time: prayerTimes.fajr),
-        PrayerTime(name: 'Dhuhr', time: prayerTimes.dhuhr),
-        PrayerTime(name: 'Asr', time: prayerTimes.asr),
-        PrayerTime(name: 'Maghrib', time: prayerTimes.maghrib),
-        PrayerTime(name: 'Isha', time: prayerTimes.isha),
+        PrayerTime(name: 'Fajr', time: prayerTimes.fajr!),
+        PrayerTime(name: 'Dhuhr', time: prayerTimes.dhuhr!),
+        PrayerTime(name: 'Asr', time: prayerTimes.asr!),
+        PrayerTime(name: 'Maghrib', time: prayerTimes.maghrib!),
+        PrayerTime(name: 'Isha', time: prayerTimes.isha!),
       ];
     } catch (e) {
       throw Exception('Failed to get prayer times: $e');
@@ -59,26 +64,26 @@ class PrayerTimeService {
 
   String getNextPrayerName(List<PrayerTime> prayerTimes) {
     final now = DateTime.now();
-    
+
     for (var prayer in prayerTimes) {
       if (prayer.time.isAfter(now)) {
         return prayer.name;
       }
     }
-    
+
     // If no prayer is left today, return Fajr (next day)
     return 'Fajr';
   }
 
   DateTime? getNextPrayerTime(List<PrayerTime> prayerTimes) {
     final now = DateTime.now();
-    
+
     for (var prayer in prayerTimes) {
       if (prayer.time.isAfter(now)) {
         return prayer.time;
       }
     }
-    
+
     return null; // No more prayers today
   }
 }

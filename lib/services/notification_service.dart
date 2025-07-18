@@ -1,6 +1,6 @@
 // services/notification_service.dart
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:timezone/timezone.dart' as tz;
+// import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz;
 
 class NotificationService {
@@ -27,23 +27,26 @@ class NotificationService {
     String prayerName,
     DateTime prayerTime,
   ) async {
-    const AndroidNotificationDetails androidPlatformChannelSpecifics =
-        AndroidNotificationDetails(
-          'prayer_channel',
-          'Prayer Notifications',
-          channelDescription: 'Notifications for prayer times',
-          importance: Importance.high,
-          priority: Priority.high,
-          playSound: true,
-          enableVibration: true,
-        );
+    // Note: Scheduling functionality is currently disabled
+    // Uncomment the code below when ready to implement scheduled notifications
 
-    const NotificationDetails platformChannelSpecifics = NotificationDetails(
-      android: androidPlatformChannelSpecifics,
-    );
+    // const AndroidNotificationDetails androidPlatformChannelSpecifics =
+    //     AndroidNotificationDetails(
+    //       'prayer_channel',
+    //       'Prayer Notifications',
+    //       channelDescription: 'Notifications for prayer times',
+    //       importance: Importance.high,
+    //       priority: Priority.high,
+    //       playSound: true,
+    //       enableVibration: true,
+    //     );
+
+    // const NotificationDetails platformChannelSpecifics = NotificationDetails(
+    //   android: androidPlatformChannelSpecifics,
+    // );
 
     // Schedule notification 10 minutes before prayer time
-    final scheduledTime = prayerTime.subtract(const Duration(minutes: 10));
+    // final scheduledTime = prayerTime.subtract(const Duration(minutes: 10));
 
     // await _notifications.zonedSchedule(
     //   prayerName.hashCode,

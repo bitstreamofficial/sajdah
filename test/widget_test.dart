@@ -8,7 +8,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:sajdah/main.dart';
 import 'package:sajdah/screens/dashboard/dashboard.dart';
 
 void main() {

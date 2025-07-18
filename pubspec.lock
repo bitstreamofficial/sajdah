@@ -2,7 +2,7 @@
 # See https://dart.dev/tools/pub/glossary#lockfile
 packages:
   adhan_dart:
-    dependency: "direct dev"
+    dependency: "direct main"
     description:
       name: adhan_dart
       sha256: "3510e87a81acd816dfe11df458d236cb33f64a9132d2f5becc57ef6cbfefb565"
@@ -10,7 +10,7 @@ packages:
     source: hosted
     version: "1.1.2"
   android_alarm_manager_plus:
-    dependency: "direct dev"
+    dependency: "direct main"
     description:
       name: android_alarm_manager_plus
       sha256: "3aaf2bd35177e60a7e90accd9d615d35408b556339becec22cc1284babbba8b7"
@@ -127,7 +127,7 @@ packages:
     source: hosted
     version: "6.0.0"
   flutter_local_notifications:
-    dependency: "direct dev"
+    dependency: "direct main"
     description:
       name: flutter_local_notifications
       sha256: "81350df6cb90196390b0b175c645968620d508a4fc9db5996215a1cfa4135a03"
@@ -177,7 +177,7 @@ packages:
     source: hosted
     version: "0.1.1"
   geolocator:
-    dependency: "direct dev"
+    dependency: "direct main"
     description:
       name: geolocator
       sha256: "79939537046c9025be47ec645f35c8090ecadb6fe98eba146a0d25e8c1357516"
@@ -241,7 +241,7 @@ packages:
     source: hosted
     version: "0.2.8"
   hive:
-    dependency: "direct dev"
+    dependency: "direct main"
     description:
       name: hive
       sha256: "8dcf6db979d7933da8217edcec84e9df1bdb4e4edc7fc77dbd5aa74356d6d941"
@@ -249,7 +249,7 @@ packages:
     source: hosted
     version: "2.2.3"
   hive_flutter:
-    dependency: "direct dev"
+    dependency: "direct main"
     description:
       name: hive_flutter
       sha256: dca1da446b1d808a51689fb5d0c6c9510c0a2ba01e22805d492c73b68e33eecc
@@ -273,7 +273,7 @@ packages:
     source: hosted
     version: "4.1.2"
   intl:
-    dependency: "direct dev"
+    dependency: "direct main"
     description:
       name: intl
       sha256: "3df61194eb431efc39c4ceba583b95633a403f46c9fd341e550ce0bfa50e9aa5"
@@ -417,7 +417,7 @@ packages:
     source: hosted
     version: "2.3.0"
   permission_handler:
-    dependency: "direct dev"
+    dependency: "direct main"
     description:
       name: permission_handler
       sha256: bc917da36261b00137bbc8896bf1482169cd76f866282368948f032c8c1caae1
@@ -489,7 +489,7 @@ packages:
     source: hosted
     version: "2.1.8"
   provider:
-    dependency: "direct dev"
+    dependency: "direct main"
     description:
       name: provider
       sha256: "4abbd070a04e9ddc287673bf5a030c7ca8b685ff70218720abab8b092f53dd84"
@@ -542,7 +542,7 @@ packages:
     source: hosted
     version: "1.4.1"
   swipe_cards:
-    dependency: "direct dev"
+    dependency: "direct main"
     description:
       name: swipe_cards
       sha256: c34f28e71e3d4041455aaff49ac4242a79cad0e7d0ec16978f871059f3d956e3
@@ -566,7 +566,7 @@ packages:
     source: hosted
     version: "0.7.4"
   timezone:
-    dependency: "direct dev"
+    dependency: "direct main"
     description:
       name: timezone
       sha256: dd14a3b83cfd7cb19e7888f1cbc20f258b8d71b54c06f79ac585f14093a287d1
