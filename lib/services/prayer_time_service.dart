@@ -1,4 +1,4 @@
-// services/prayer_time_service.dart
+
 import 'package:adhan_dart/adhan_dart.dart';
 import 'package:geolocator/geolocator.dart';
 import '../models/prayer_time.dart';
@@ -36,7 +36,7 @@ class PrayerTimeService {
       final coordinates = Coordinates(position.latitude, position.longitude);
       final calculationParameters = CalculationParameters(
         method: CalculationMethod.MuslimWorldLeague,
-        madhab: Madhab.Shafi,
+        madhab: Madhab.Shafi, fajrAngle: null, ishaAngle: null,
       );
 
       final prayerTimes = PrayerTimes(

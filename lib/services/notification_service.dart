@@ -8,12 +8,12 @@ class NotificationService {
   factory NotificationService() => _instance;
   NotificationService._internal();
 
-  final FlutterLocalNotificationsPlugin _notifications = 
+  final FlutterLocalNotificationsPlugin _notifications =
       FlutterLocalNotificationsPlugin();
 
   Future<void> initialize() async {
     tz.initializeTimeZones();
-    
+
     const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('@mipmap/ic_launcher');
 
@@ -29,47 +29,49 @@ class NotificationService {
   ) async {
     const AndroidNotificationDetails androidPlatformChannelSpecifics =
         AndroidNotificationDetails(
-      'prayer_channel',
-      'Prayer Notifications',
-      channelDescription: 'Notifications for prayer times',
-      importance: Importance.high,
-      priority: Priority.high,
-      playSound: true,
-      enableVibration: true,
-    );
+          'prayer_channel',
+          'Prayer Notifications',
+          channelDescription: 'Notifications for prayer times',
+          importance: Importance.high,
+          priority: Priority.high,
+          playSound: true,
+          enableVibration: true,
+        );
 
-    const NotificationDetails platformChannelSpecifics =
-        NotificationDetails(android: androidPlatformChannelSpecifics);
+    const NotificationDetails platformChannelSpecifics = NotificationDetails(
+      android: androidPlatformChannelSpecifics,
+    );
 
     // Schedule notification 10 minutes before prayer time
     final scheduledTime = prayerTime.subtract(const Duration(minutes: 10));
-    
-    await _notifications.zonedSchedule(
-      prayerName.hashCode,
-      'Prayer Time Reminder',
-      '$prayerName prayer is in 10 minutes',
-      tz.TZDateTime.from(scheduledTime, tz.local),
-      platformChannelSpecifics,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
-      matchDateTimeComponents: DateTimeComponents.time,
-    );
+
+    // await _notifications.zonedSchedule(
+    //   prayerName.hashCode,
+    //   'Prayer Time Reminder',
+    //   '$prayerName prayer is in 10 minutes',
+    //   tz.TZDateTime.from(scheduledTime, tz.local),
+    //   platformChannelSpecifics,
+    //   uiLocalNotificationDateInterpretation:
+    //       UILocalNotificationDateInterpretation.absoluteTime,
+    //   matchDateTimeComponents: DateTimeComponents.time, androidScheduleMode: null,
+    // );
   }
 
   Future<void> showPrayerTimeNotification(String prayerName) async {
     const AndroidNotificationDetails androidPlatformChannelSpecifics =
         AndroidNotificationDetails(
-      'prayer_now_channel',
-      'Prayer Time Now',
-      channelDescription: 'Current prayer time notifications',
-      importance: Importance.max,
-      priority: Priority.high,
-      playSound: true,
-      enableVibration: true,
-    );
+          'prayer_now_channel',
+          'Prayer Time Now',
+          channelDescription: 'Current prayer time notifications',
+          importance: Importance.max,
+          priority: Priority.high,
+          playSound: true,
+          enableVibration: true,
+        );
 
-    const NotificationDetails platformChannelSpecifics =
-        NotificationDetails(android: androidPlatformChannelSpecifics);
+    const NotificationDetails platformChannelSpecifics = NotificationDetails(
+      android: androidPlatformChannelSpecifics,
+    );
 
     await _notifications.show(
       0,
