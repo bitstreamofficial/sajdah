@@ -1,42 +1,25 @@
-// main.dart
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:hive_flutter/hive_flutter.dart';
-import 'package:sajdah/screens/dashboard/dashboard.dart';
-import 'providers/salah_provider.dart';
+import 'package:flutter/services.dart';
+import 'package:sajdah/screens/main_screen.dart';
+import 'dart:math' as math;
 
-import 'services/notification_service.dart';
+import 'package:sajdah/screens/qibla_finder_screen.dart';
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-
-  // Initialize Hive for local storage
-  await Hive.initFlutter();
-  await Hive.openBox('salah_tracker');
-
-  // Initialize notification service
-  await NotificationService().initialize();
-
-  runApp(const SalahApp());
+void main() {
+  runApp(MyApp());
 }
 
-class SalahApp extends StatelessWidget {
-  const SalahApp({Key? key}) : super(key: key);
-
+class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (context) => SalahProvider(),
-      child: MaterialApp(
-        title: 'Salah Tracker',
-        theme: ThemeData(
-          primarySwatch: Colors.green,
-          fontFamily: 'Roboto',
-          scaffoldBackgroundColor: const Color(0xFFF5F5F5),
-        ),
-        home: PrayerSwipeScreen(),
-        debugShowCheckedModeBanner: false,
+    return MaterialApp(
+      title: 'Islamic Prayer App',
+      theme: ThemeData(
+        primarySwatch: Colors.brown,
+        fontFamily: 'SF Pro Display',
       ),
+      home: MainScreen(),
+      debugShowCheckedModeBanner: false,
     );
   }
 }

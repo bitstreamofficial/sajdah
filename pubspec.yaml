@@ -58,9 +58,6 @@ dependencies:
   # Permissions
   permission_handler: ^12.0.1
 
-  # Background tasks
-  android_alarm_manager_plus: ^4.0.7
-
   swipe_cards: ^2.0.0+1
 
 dev_dependencies:
@@ -88,9 +85,13 @@ flutter:
   uses-material-design: true
 
   # To add assets to your application, add an assets section, like this:
-  # assets:
-  #   - images/a_dot_burr.jpeg
-  #   - images/a_dot_ham.jpeg
+  assets:
+    - assets/images/fajr.png
+    - assets/images/dhuhr.png
+    - assets/images/asr.png
+    - assets/images/maghrib.png
+    - assets/images/isha.png
+    - assets/images/sajdah.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
