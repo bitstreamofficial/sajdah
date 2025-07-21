@@ -1,12 +1,291 @@
 import 'dart:ui';
-
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:sajdah/models/prayer_model.dart';
+import 'package:sajdah/services/prayer_service.dart';
 
-class PrayerCard extends StatelessWidget {
+class PrayerCard extends StatefulWidget {
   final Prayer prayer;
 
   const PrayerCard({Key? key, required this.prayer}) : super(key: key);
+
+  @override
+  _PrayerCardState createState() => _PrayerCardState();
+}
+
+class _PrayerCardState extends State<PrayerCard> {
+  PrayerData? _prayerData;
+  Timer? _timer;
+  String _timeRemaining = '';
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPrayerData();
+    _startTimer();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _loadPrayerData() async {
+    try {
+      final prayerService = PrayerService();
+      final data = await prayerService.getTodaysPrayerTimes();
+      if (mounted) {
+        setState(() {
+          _prayerData = data;
+          _isLoading = false;
+          _updateTimeRemaining();
+        });
+      }
+    } catch (e) {
+      print('Error loading prayer data: $e');
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  void _startTimer() {
+    _timer = Timer.periodic(Duration(minutes: 1), (timer) {
+      if (mounted) {
+        _updateTimeRemaining();
+      }
+    });
+  }
+
+  void _updateTimeRemaining() {
+    if (_prayerData == null) return;
+
+    final currentPrayer = _getCurrentPrayerTime();
+    if (currentPrayer != null) {
+      final remaining = _calculateTimeRemaining(currentPrayer.endTime);
+      setState(() {
+        _timeRemaining = remaining;
+      });
+    } else {
+      // If no current prayer found, try to find the next prayer
+      final nextPrayer = _getNextPrayerTime();
+      if (nextPrayer != null) {
+        final remaining = _calculateTimeToStart(nextPrayer.startTime);
+        setState(() {
+          _timeRemaining = remaining.toString();
+        });
+      } else {
+        setState(() {
+          _timeRemaining = 'N/A';
+        });
+      }
+    }
+  }
+
+  PrayerTime? _getCurrentPrayerTime() {
+    if (_prayerData == null) return null;
+    
+    final now = DateTime.now();
+    final currentTime = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+    
+    print('Current time: $currentTime');
+    print('Looking for prayer: ${widget.prayer.name}');
+    
+    // Find the specific prayer that matches the widget's prayer name
+    final matchingPrayers = _prayerData!.prayerTimes.where((prayer) => 
+        prayer.name.toLowerCase() == widget.prayer.name.toLowerCase()).toList();
+    
+    print('Found ${matchingPrayers.length} matching prayers');
+    
+    for (final prayer in matchingPrayers) {
+      print('Checking prayer: ${prayer.name}, Start: ${prayer.startTime}, End: ${prayer.endTime}');
+      
+      if (_isTimeBetween(currentTime, prayer.startTime, prayer.endTime)) {
+        print('Found current prayer: ${prayer.name}');
+        return prayer;
+      }
+    }
+    
+    print('No current prayer found for ${widget.prayer.name}');
+    return null;
+  }
+
+  // New method to get next prayer time for the specific prayer
+  PrayerTime? _getNextPrayerTime() {
+    if (_prayerData == null) return null;
+    
+    final now = DateTime.now();
+    final currentTimeMinutes = now.hour * 60 + now.minute;
+    
+    // Find all instances of this prayer
+    final matchingPrayers = _prayerData!.prayerTimes.where((prayer) => 
+        prayer.name.toLowerCase() == widget.prayer.name.toLowerCase()).toList();
+    
+    // Find the next occurrence
+    for (final prayer in matchingPrayers) {
+      final prayerStartMinutes = _parseTime(_convertTo24Hour(prayer.startTime));
+      
+      if (prayerStartMinutes > currentTimeMinutes) {
+        return prayer;
+      }
+    }
+    
+    // If no prayer found for today, it means the next occurrence is tomorrow
+    return matchingPrayers.isNotEmpty ? matchingPrayers.first : null;
+  }
+
+  // New method to calculate time until prayer starts
+  String _calculateTimeToStart(String startTime) {
+    try {
+      final now = DateTime.now();
+      final currentTime = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+      
+      final currentMinutes = _parseTime(currentTime);
+      final startMinutes = _parseTime(_convertTo24Hour(startTime));
+      
+      int remainingMinutes;
+      if (startMinutes >= currentMinutes) {
+        remainingMinutes = startMinutes - currentMinutes;
+      } else {
+        // Next day
+        remainingMinutes = (1440 - currentMinutes) + startMinutes;
+      }
+      
+      final hours = remainingMinutes ~/ 60;
+      final minutes = remainingMinutes % 60;
+      
+      if (hours > 0) {
+        return '${hours}hr & ${minutes} min';
+      } else {
+        return '${minutes} min';
+      }
+    } catch (e) {
+      print('Error calculating time to start: $e');
+      return 'N/A';
+    }
+  }
+
+  bool _isTimeBetween(String current, String start, String end) {
+    try {
+      final currentMinutes = _parseTime(current);
+      final startMinutes = _parseTime(_convertTo24Hour(start));
+      final endMinutes = _parseTime(_convertTo24Hour(end));
+      
+      print('Time comparison - Current: $currentMinutes, Start: $startMinutes, End: $endMinutes');
+      
+      if (startMinutes <= endMinutes) {
+        // Normal case (doesn't cross midnight)
+        return currentMinutes >= startMinutes && currentMinutes <= endMinutes;
+      } else {
+        // Time range crosses midnight
+        return currentMinutes >= startMinutes || currentMinutes <= endMinutes;
+      }
+    } catch (e) {
+      print('Error in _isTimeBetween: $e');
+      return false;
+    }
+  }
+
+  int _parseTime(String timeString) {
+    try {
+      final parts = timeString.split(':');
+      return int.parse(parts[0]) * 60 + int.parse(parts[1]);
+    } catch (e) {
+      print('Error parsing time: $timeString, Error: $e');
+      return 0;
+    }
+  }
+
+  String _convertTo24Hour(String time12) {
+    try {
+      final parts = time12.trim().split(' ');
+      if (parts.length != 2) {
+        print('Invalid time format: $time12');
+        return time12; // Return original if format is wrong
+      }
+      
+      final timePart = parts[0].split(':');
+      final period = parts[1].toUpperCase();
+      
+      if (timePart.length != 2) {
+        print('Invalid time part format: ${parts[0]}');
+        return time12; // Return original if format is wrong
+      }
+      
+      int hours = int.parse(timePart[0]);
+      final minutes = timePart[1];
+      
+      if (period == 'AM' && hours == 12) {
+        hours = 0;
+      } else if (period == 'PM' && hours != 12) {
+        hours = hours + 12;
+      }
+      
+      return '${hours.toString().padLeft(2, '0')}:$minutes';
+    } catch (e) {
+      print('Error converting to 24 hour: $time12, Error: $e');
+      return time12; // Return original if conversion fails
+    }
+  }
+
+  String _calculateTimeRemaining(String endTime) {
+    try {
+      final now = DateTime.now();
+      final currentTime = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+      
+      print('Calculating time remaining - Current: $currentTime, End: $endTime');
+      
+      final currentMinutes = _parseTime(currentTime);
+      final endMinutes = _parseTime(_convertTo24Hour(endTime));
+      
+      int remainingMinutes;
+      if (endMinutes >= currentMinutes) {
+        remainingMinutes = endMinutes - currentMinutes;
+      } else {
+        // Next day
+        remainingMinutes = (1440 - currentMinutes) + endMinutes;
+      }
+      
+      final hours = remainingMinutes ~/ 60;
+      final minutes = remainingMinutes % 60;
+      
+      if (hours > 0) {
+        return '${hours}hr & ${minutes} min';
+      } else {
+        return '${minutes} min';
+      }
+    } catch (e) {
+      print('Error calculating time remaining: $e');
+      return 'N/A';
+    }
+  }
+
+  String _formatGregorianDate() {
+    if (_prayerData?.dateInfo.gregorian == null) return 'Loading...';
+    
+    final gregorian = _prayerData!.dateInfo.gregorian;
+    final weekday = gregorian.weekday.en;
+    final day = gregorian.day;
+    final month = gregorian.month.en;
+    final year = gregorian.year;
+    
+    return '$weekday, $day $month $year';
+  }
+
+  String _formatHijriDate() {
+    if (_prayerData?.dateInfo.hijri == null) return 'Loading...';
+    
+    final hijri = _prayerData!.dateInfo.hijri;
+    final day = hijri.day;
+    final month = hijri.month.en;
+    final year = hijri.year;
+    
+    return '$day $month $year';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -20,7 +299,7 @@ class PrayerCard extends StatelessWidget {
       height: double.infinity,
       child: Card(
         elevation: 12,
-        shadowColor: prayer.primaryColor.withOpacity(0.3),
+        shadowColor: widget.prayer.primaryColor.withOpacity(0.3),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(28),
@@ -36,7 +315,7 @@ class PrayerCard extends StatelessWidget {
                       decoration: BoxDecoration(
                         image: DecorationImage(
                           image: AssetImage(
-                            _getPrayerBackgroundImage(prayer.name),
+                            _getPrayerBackgroundImage(widget.prayer.name),
                           ),
                           fit: BoxFit.cover,
                         ),
@@ -53,9 +332,9 @@ class PrayerCard extends StatelessWidget {
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: [
-                        _getPrayerOverlayColor(prayer.name).withOpacity(0.3),
-                        _getPrayerOverlayColor(prayer.name).withOpacity(0.6),
-                        _getPrayerOverlayColor(prayer.name).withOpacity(0.8),
+                        _getPrayerOverlayColor(widget.prayer.name).withOpacity(0.3),
+                        _getPrayerOverlayColor(widget.prayer.name).withOpacity(0.6),
+                        _getPrayerOverlayColor(widget.prayer.name).withOpacity(0.8),
                       ],
                       stops: [0.0, 0.5, 1.0],
                     ),
@@ -68,7 +347,7 @@ class PrayerCard extends StatelessWidget {
                     // Enhanced decorative elements
                     _buildDecorativeCircles(),
 
-                    // Main content with flexible layout - FIXED OVERFLOW
+                    // Main content with flexible layout
                     SafeArea(
                       child: Padding(
                         padding: EdgeInsets.symmetric(
@@ -89,7 +368,7 @@ class PrayerCard extends StatelessWidget {
                                 child: IntrinsicHeight(
                                   child: Column(
                                     children: [
-                                      // Header - Flexible (now includes date)
+                                      // Header - Flexible (now includes actual date)
                                       _buildHeader(isSmallScreen, isVerySmall),
 
                                       // Flexible spacer
@@ -100,7 +379,7 @@ class PrayerCard extends StatelessWidget {
                                         ),
                                       ),
 
-                                      // Central prayer circle - Adaptive and flexible (NO TIME REMAINING INSIDE)
+                                      // Central prayer circle - Adaptive and flexible
                                       Flexible(
                                         flex: isVerySmall ? 6 : 8,
                                         child: Center(
@@ -121,7 +400,7 @@ class PrayerCard extends StatelessWidget {
                                         ),
                                       ),
 
-                                      // Time remaining section - NEW INDEPENDENT SECTION
+                                      // Time remaining section with actual data
                                       _buildTimeRemainingSection(
                                         isSmallScreen,
                                         isVerySmall,
@@ -328,7 +607,7 @@ class PrayerCard extends StatelessWidget {
                 ),
               ),
 
-              // Date section (right side)
+              // Date section (right side) - Now showing actual data
               if (!isVerySmall)
                 Expanded(
                   flex: 1,
@@ -337,7 +616,7 @@ class PrayerCard extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        'Friday, 12 Sept 2024',
+                        _isLoading ? 'Loading...' : _formatGregorianDate(),
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: isSmallScreen ? 11 : 13,
@@ -358,7 +637,7 @@ class PrayerCard extends StatelessWidget {
                           children: [
                             SizedBox(height: 1),
                             Text(
-                              '9 Rabi 1445',
+                              _isLoading ? 'Loading...' : _formatHijriDate(),
                               style: TextStyle(
                                 color: Colors.white.withOpacity(0.9),
                                 fontSize: 9,
@@ -390,22 +669,15 @@ class PrayerCard extends StatelessWidget {
     bool isVerySmall,
     double availableHeight,
   ) {
-    // Dynamic sizing based on available space - made bigger
-    final maxCircleSize =
-        availableHeight * 0.55; // Increased from 0.45 to make it bigger
+    // Dynamic sizing based on available space
+    final maxCircleSize = availableHeight * 0.55;
     final circleSize = isVerySmall
-        ? (maxCircleSize < 160 ? maxCircleSize : 160.0) // Increased from 140
+        ? (maxCircleSize < 160 ? maxCircleSize : 160.0)
         : (isSmallScreen
-              ? (maxCircleSize < 180
-                    ? maxCircleSize
-                    : 180.0) // Increased from 160
+              ? (maxCircleSize < 180 ? maxCircleSize : 180.0)
               : (isMediumScreen
-                    ? (maxCircleSize < 220
-                          ? maxCircleSize
-                          : 220.0) // Increased from 190
-                    : (maxCircleSize < 260
-                          ? maxCircleSize
-                          : 260.0))); // Increased from 220
+                    ? (maxCircleSize < 220 ? maxCircleSize : 220.0)
+                    : (maxCircleSize < 260 ? maxCircleSize : 260.0)));
 
     final innerCircleSize = circleSize * 0.75;
 
@@ -421,9 +693,7 @@ class PrayerCard extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.white.withOpacity(
-              0.2,
-            ), // Changed from black to white for lightish blur
+            color: Colors.white.withOpacity(0.2),
             blurRadius: isVerySmall ? 15 : 25,
             offset: Offset(0, isVerySmall ? 5 : 10),
           ),
@@ -444,7 +714,7 @@ class PrayerCard extends StatelessWidget {
               // Prayer image instead of icon
               _buildPrayerImage(isSmallScreen, isVerySmall),
 
-              // Prayer name - now with more space
+              // Prayer name
               _buildPrayerName(isSmallScreen, isMediumScreen, isVerySmall),
             ],
           ),
@@ -493,7 +763,7 @@ class PrayerCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '1hr & 33 min',
+                _isLoading ? 'Loading...' : (_timeRemaining.isEmpty ? 'N/A' : _timeRemaining),
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: isVerySmall ? 14 : (isSmallScreen ? 16 : 18),
@@ -529,7 +799,6 @@ class PrayerCard extends StatelessWidget {
     );
   }
 
-  // New method to build prayer image instead of icon
   Widget _buildPrayerImage(bool isSmallScreen, bool isVerySmall) {
     final imageSize = isVerySmall ? 32.0 : (isSmallScreen ? 38.0 : 46.0);
     final imageContainerSize = isVerySmall
@@ -539,7 +808,6 @@ class PrayerCard extends StatelessWidget {
     return Container(
       width: imageContainerSize,
       height: imageContainerSize,
-
       child: ClipRRect(
         borderRadius: BorderRadius.circular(imageContainerSize / 2),
         child: Image.asset(
@@ -547,8 +815,7 @@ class PrayerCard extends StatelessWidget {
           width: imageSize,
           height: imageSize,
           fit: BoxFit.contain,
-          color: Colors
-              .white, // This will tint the image white if it's a monochrome image
+          color: Colors.white,
           colorBlendMode: BlendMode.srcIn,
         ),
       ),
@@ -561,14 +828,14 @@ class PrayerCard extends StatelessWidget {
     bool isVerySmall,
   ) {
     return Text(
-      prayer.name,
+      widget.prayer.name,
       textAlign: TextAlign.center,
       style: TextStyle(
         fontSize: isVerySmall
-            ? 14 // Increased since more space available
+            ? 14
             : (isSmallScreen
                   ? 18
-                  : (isMediumScreen ? 18 : 24)), // Increased sizes
+                  : (isMediumScreen ? 18 : 24)),
         fontWeight: FontWeight.bold,
         color: Colors.white,
         letterSpacing: 0.8,

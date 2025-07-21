@@ -1,77 +1,119 @@
 import 'package:flutter/material.dart';
 import 'package:sajdah/models/prayer_model.dart';
 import 'package:sajdah/screens/home_screen/prayer_card.dart';
+import 'package:sajdah/services/prayer_service.dart';
 import 'package:swipe_cards/swipe_cards.dart';
 
 class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
+
   @override
   _HomeScreenState createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  // Prayer data with beautiful gradient colors
-  final List<Prayer> prayers = [
-    Prayer(
-      name: 'Fajr',
-      arabicName: 'الفجر',
-      time: '5:30 AM',
-      primaryColor: Color(0xFF4A90E2),
-      secondaryColor: Color(0xFF6BB6FF),
-      icon: Icons.wb_sunny_outlined,
-      quote:
-          'The early morning prayer brings light to your day and peace to your heart.',
-    ),
-    Prayer(
-      name: 'Dhuhr',
-      arabicName: 'الظهر',
-      time: '12:15 PM',
-      primaryColor: Color(0xFFE67E22),
-      secondaryColor: Color(0xFFFF9A56),
-      icon: Icons.wb_sunny,
-      quote: 'Pause in the middle of your day to connect with the Divine.',
-    ),
-    Prayer(
-      name: 'Asr',
-      arabicName: 'العصر',
-      time: '3:45 PM',
-      primaryColor: Color(0xFFF39C12),
-      secondaryColor: Color(0xFFFFB347),
-      icon: Icons.wb_sunny_outlined,
-      quote:
-          'The afternoon prayer reminds us to be grateful for our blessings.',
-    ),
-    Prayer(
-      name: 'Maghrib',
-      arabicName: 'المغرب',
-      time: '6:20 PM',
-      primaryColor: Color(0xFFE74C3C),
-      secondaryColor: Color(0xFFFF6B6B),
-      icon: Icons.wb_twilight,
-      quote:
-          'As the sun sets, let your worries fade and your faith strengthen.',
-    ),
-    Prayer(
-      name: 'Isha',
-      arabicName: 'العشاء',
-      time: '8:00 PM',
-      primaryColor: Color(0xFF8E44AD),
-      secondaryColor: Color(0xFFB19CD9),
-      icon: Icons.bedtime,
-      quote: 'End your day with gratitude and prepare your soul for rest.',
-    ),
-  ];
+  final PrayerService _prayerService = PrayerService();
+  
+  // Remove the hardcoded prayers list and replace with dynamic list
+  List<Prayer> prayers = [];
+  bool isLoading = true;
+  String? errorMessage;
 
   late List<SwipeItem> swipeItems;
   late MatchEngine matchEngine;
   int currentIndex = 0;
 
+  // Prayer colors and icons mapping
+  final Map<String, Map<String, dynamic>> prayerStyles = {
+    'Fajr': {
+      'primaryColor': Color(0xFF4A90E2),
+      'secondaryColor': Color(0xFF6BB6FF),
+      'icon': Icons.wb_sunny_outlined,
+      'quote': 'The early morning prayer brings light to your day and peace to your heart.',
+    },
+    'Dhuhr': {
+      'primaryColor': Color(0xFFE67E22),
+      'secondaryColor': Color(0xFFFF9A56),
+      'icon': Icons.wb_sunny,
+      'quote': 'Pause in the middle of your day to connect with the Divine.',
+    },
+    'Asr': {
+      'primaryColor': Color(0xFFF39C12),
+      'secondaryColor': Color(0xFFFFB347),
+      'icon': Icons.wb_sunny_outlined,
+      'quote': 'The afternoon prayer reminds us to be grateful for our blessings.',
+    },
+    'Maghrib': {
+      'primaryColor': Color(0xFFE74C3C),
+      'secondaryColor': Color(0xFFFF6B6B),
+      'icon': Icons.wb_twilight,
+      'quote': 'As the sun sets, let your worries fade and your faith strengthen.',
+    },
+    'Isha': {
+      'primaryColor': Color(0xFF8E44AD),
+      'secondaryColor': Color(0xFFB19CD9),
+      'icon': Icons.bedtime,
+      'quote': 'End your day with gratitude and prepare your soul for rest.',
+    },
+  };
+
   @override
   void initState() {
     super.initState();
-    _initializeSwipeItems();
+    _loadPrayerTimes();
+  }
+
+  // Load prayer times from the service
+  Future<void> _loadPrayerTimes() async {
+    try {
+      setState(() {
+        isLoading = true;
+        errorMessage = null;
+      });
+
+      final fardPrayers = await _prayerService.getTodaysFardPrayers();
+      
+      if (fardPrayers.isEmpty) {
+        setState(() {
+          errorMessage = 'No prayer times available';
+          isLoading = false;
+        });
+        return;
+      }
+
+      // Convert FardPrayerInfo to Prayer objects
+      final List<Prayer> loadedPrayers = fardPrayers.map((fardPrayer) {
+        final style = prayerStyles[fardPrayer.name] ?? prayerStyles['Fajr']!;
+        
+        return Prayer(
+          name: fardPrayer.name,
+          arabicName: fardPrayer.arabicName,
+          time: fardPrayer.startTime,
+          primaryColor: style['primaryColor'],
+          secondaryColor: style['secondaryColor'],
+          icon: style['icon'],
+          quote: style['quote'],
+        );
+      }).toList();
+
+      setState(() {
+        prayers = loadedPrayers;
+        isLoading = false;
+      });
+
+      _initializeSwipeItems();
+    } catch (e) {
+      setState(() {
+        errorMessage = 'Error loading prayer times: ${e.toString()}';
+        isLoading = false;
+      });
+      print('Error loading prayer times: $e');
+    }
   }
 
   void _initializeSwipeItems() {
+    if (prayers.isEmpty) return;
+
     // Initialize swipe items only for untracked prayers
     final unTrackedPrayers = prayers
         .where((prayer) => !prayer.isTracked)
@@ -128,40 +170,45 @@ class _HomeScreenState extends State<HomeScreen> {
               // Header with title and progress
               // _buildHeader(),
 
-              // Upper half - Swipe cards
-              Container(
-                height: 400, // Fixed height for swipe cards
-                padding: EdgeInsets.symmetric(horizontal: 16),
-                child: swipeItems.isNotEmpty
-                    ? SwipeCards(
-                        matchEngine: matchEngine,
-                        itemBuilder: (context, index) {
-                          return PrayerCard(
-                            prayer: swipeItems[index].content as Prayer,
-                          );
-                        },
-                        onStackFinished: () {
-                          setState(() {}); // Refresh UI when all cards are done
-                        },
-                        itemChanged: (SwipeItem item, int index) {
-                          // Update current index when card changes
-                          setState(() {
-                            currentIndex = index;
-                          });
-                        },
-                        leftSwipeAllowed: true,
-                        rightSwipeAllowed: true,
-                        upSwipeAllowed: false,
-                        fillSpace: false,
-                      )
-                    : _buildAllCompletedCard(),
-              ),
+              // Show loading, error, or content
+              if (isLoading)
+                _buildLoadingWidget()
+              else if (errorMessage != null)
+                _buildErrorWidget()
+              else
+                ...[
+                  // Upper half - Swipe cards
+                  Container(
+                    height: 400, // Fixed height for swipe cards
+                    padding: EdgeInsets.symmetric(horizontal: 16),
+                    child: swipeItems.isNotEmpty
+                        ? SwipeCards(
+                            matchEngine: matchEngine,
+                            itemBuilder: (context, index) {
+                              return PrayerCard(
+                                prayer: swipeItems[index].content as Prayer,
+                              );
+                            },
+                            onStackFinished: () {
+                              setState(() {}); // Refresh UI when all cards are done
+                            },
+                            itemChanged: (SwipeItem item, int index) {
+                              // Update current index when card changes
+                              setState(() {
+                                currentIndex = index;
+                              });
+                            },
+                            leftSwipeAllowed: true,
+                            rightSwipeAllowed: true,
+                            upSwipeAllowed: false,
+                            fillSpace: false,
+                          )
+                        : _buildAllCompletedCard(),
+                  ),
 
-              // Action buttons (only show if there are cards to swipe)
-              // if (swipeItems.isNotEmpty) _buildActionButtons(),
-
-              // Lower half - Habit tracker
-              _buildHabitTracker(),
+                  // Lower half - Habit tracker
+                  _buildHabitTracker(),
+                ],
             ],
           ),
         ),
@@ -169,52 +216,145 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Header widget with title and progress indicator
-  Widget _buildHeader() {
+  // Loading widget
+  Widget _buildLoadingWidget() {
     return Container(
-      padding: EdgeInsets.all(20),
-      child: Column(
-        children: [
-          Text(
-            'Daily Prayer Tracker',
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
+      height: 400,
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(Colors.blue.shade600),
             ),
-          ),
-          SizedBox(height: 8),
-          if (swipeItems.isNotEmpty)
+            SizedBox(height: 16),
             Text(
-              'Swipe right if you prayed, left if you missed',
-              style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
-            ),
-          SizedBox(height: 16),
-          // Overall progress
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Colors.blue.shade50,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  'Tracked: $trackedPrayers / ${prayers.length}',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.blue.shade700,
-                  ),
-                ),
+              'Loading prayer times...',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey.shade600,
+                fontWeight: FontWeight.w500,
               ),
-            ],
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }
+
+  // Error widget
+  Widget _buildErrorWidget() {
+    return Container(
+      height: 400,
+      margin: EdgeInsets.all(16),
+      child: Card(
+        elevation: 8,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Colors.red.shade400, Colors.red.shade600],
+            ),
+          ),
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.error_outline, size: 80, color: Colors.white),
+                SizedBox(height: 16),
+                Text(
+                  'Failed to load prayer times',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                SizedBox(height: 8),
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 32),
+                  child: Text(
+                    errorMessage ?? 'Unknown error occurred',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.white.withOpacity(0.9),
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: _loadPrayerTimes,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: Colors.red.shade600,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.refresh, size: 20),
+                      SizedBox(width: 8),
+                      Text('Retry'),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Header widget with title and progress indicator
+  // Widget _buildHeader() {
+  //   return Container(
+  //     padding: EdgeInsets.all(20),
+  //     child: Column(
+  //       children: [
+  //         Text(
+  //           'Daily Prayer Tracker',
+  //           style: TextStyle(
+  //             fontSize: 28,
+  //             fontWeight: FontWeight.bold,
+  //             color: Colors.black87,
+  //           ),
+  //         ),
+  //         SizedBox(height: 8),
+  //         if (swipeItems.isNotEmpty)
+  //           Text(
+  //             'Swipe right if you prayed, left if you missed',
+  //             style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+  //           ),
+  //         SizedBox(height: 16),
+  //         // Overall progress
+  //         Row(
+  //           mainAxisAlignment: MainAxisAlignment.center,
+  //           children: [
+  //             Container(
+  //               padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+  //               decoration: BoxDecoration(
+  //                 color: Colors.blue.shade50,
+  //                 borderRadius: BorderRadius.circular(20),
+  //               ),
+  //               child: Text(
+  //                 'Tracked: $trackedPrayers / ${prayers.length}',
+  //                 style: TextStyle(
+  //                   fontSize: 16,
+  //                   fontWeight: FontWeight.w600,
+  //                   color: Colors.blue.shade700,
+  //                 ),
+  //               ),
+  //             ),
+  //           ],
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
 
   // All prayers completed card
   Widget _buildAllCompletedCard() {
@@ -243,7 +383,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
-                    color: const Color.fromARGB(255, 207, 61, 61),
+                    color: Colors.white,
                   ),
                 ),
                 SizedBox(height: 8),
@@ -251,12 +391,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   'Check your habit tracker below',
                   style: TextStyle(
                     fontSize: 16,
-                    color: const Color.fromARGB(
-                      255,
-                      153,
-                      81,
-                      81,
-                    ).withOpacity(0.9),
+                    color: Colors.white.withOpacity(0.9),
                   ),
                 ),
               ],
@@ -269,6 +404,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // Habit tracker section
   Widget _buildHabitTracker() {
+    if (prayers.isEmpty) return Container();
+
     return Container(
       padding: EdgeInsets.all(20),
       child: Column(
